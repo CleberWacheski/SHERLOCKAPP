@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1772646728186,
+      "tag": "0000_lethal_vision",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1772650410239,
+      "tag": "0001_young_agent_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772667002825,
+      "tag": "0002_naive_grim_reaper",
+      "breakpoints": true
+    }
+  ]
+}

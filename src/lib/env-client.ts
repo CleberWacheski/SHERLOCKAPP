@@ -1,0 +1,9 @@
+import { z } from "./zod";
+
+export const envClient = z
+  .object({
+    BETTER_AUTH_URL: z.url(),
+  })
+  .parse({
+    BETTER_AUTH_URL: process.env.EXPO_PUBLIC_BETTER_AUTH_URL,
+  });
