@@ -13,9 +13,9 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: [
     "sherlockcrm://",
-    ...(process.env.NODE_ENV === "development"
-      ? ["exp://", "exp://**", "exp://192.168.*.*:*/**"]
-      : []),
+    "exp://",
+    "exp://**",
+    "exp://192.168.*.*:*/**",
   ],
   plugins: [expo()],
   emailAndPassword: {
