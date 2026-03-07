@@ -13,7 +13,8 @@ import {
   UpdateCustomerSchema,
   type CreateCustomerType,
 } from "./lib/schemas.js";
-const app = new Hono();
+
+const app = new Hono().basePath("/api");
 
 app.use("*", cors());
 

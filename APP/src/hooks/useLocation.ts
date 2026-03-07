@@ -1,5 +1,6 @@
 import { authClient } from "@/lib/auth-client";
 import type { customerStatus } from "@/lib/constants";
+import { env } from "@/lib/env";
 import { useQuery } from "@tanstack/react-query";
 
 type NearbyUser = {
@@ -35,10 +36,13 @@ export function useLocation({ coords }: UseLocationProps) {
       const params = new URLSearchParams();
       params.set("lat", String(coords.lat));
       params.set("lon", String(coords.lon));
-      const response = await fetch(`/api/location?${params.toString()}`, {
-        credentials: "omit",
-        headers,
-      });
+      const response = await fetch(
+        `${env.API_URL}/location?${params.toString()}`,
+        {
+          credentials: "omit",
+          headers,
+        },
+      );
       const data = (await response.json()) as FetchLocationResponse;
       if (!data) {
         throw new Error("Failed to fetch location");

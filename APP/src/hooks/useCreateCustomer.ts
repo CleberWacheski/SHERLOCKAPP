@@ -1,6 +1,7 @@
 import { authClient } from "@/lib/auth-client";
 import { type CreateCustomerType } from "@/lib/schemas";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { env } from "../lib/env";
 
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
@@ -12,7 +13,7 @@ export function useCreateCustomer() {
         Cookie: cookies,
         "Content-Type": "application/json",
       };
-      const response = await fetch("/api/customers", {
+      const response = await fetch(`${env.API_URL}/customers`, {
         method: "POST",
         headers,
         body: JSON.stringify({

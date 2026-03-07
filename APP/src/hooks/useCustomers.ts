@@ -1,5 +1,6 @@
 import { authClient } from "@/lib/auth-client";
 import type { customerStatus } from "@/lib/constants";
+import { env } from "@/lib/env";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 interface FetchCustomersResponse {
@@ -37,10 +38,13 @@ export function useCustomers({ status, query }: UseCustomersProps = {}) {
       if (pageParam) params.set("cursor", String(pageParam));
       if (status) params.set("status", status);
       if (query) params.set("q", query);
-      const response = await fetch(`/api/customers?${params.toString()}`, {
-        credentials: "omit",
-        headers,
-      });
+      const response = await fetch(
+        `${env.API_URL}/customers?${params.toString()}`,
+        {
+          credentials: "omit",
+          headers,
+        },
+      );
       const data = (await response.json()) as FetchCustomersResponse;
       if (!data) {
         throw new Error("Failed to fetch customers");

@@ -1,4 +1,5 @@
 import { authClient } from "@/lib/auth-client";
+import { env } from "@/lib/env";
 import type { UpdateCustomerType } from "@/lib/schemas";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -11,7 +12,7 @@ export function useUpdateCustomer() {
       const headers = {
         Cookie: cookies,
       };
-      const response = await fetch(`/api/customers`, {
+      const response = await fetch(`${env.API_URL}/customers`, {
         method: "PUT",
         credentials: "omit",
         headers,
