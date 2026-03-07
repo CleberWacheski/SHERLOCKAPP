@@ -1,6 +1,7 @@
 import type { GeoMember } from "@upstash/redis";
 import { and, desc, eq, inArray, like, lt, or } from "drizzle-orm";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { auth } from "./lib/auth.js";
 import { REDIS_GEO_KEY, type customerStatus } from "./lib/constants.js";
 import { db } from "./lib/drizzle/index.js";
@@ -12,8 +13,9 @@ import {
   UpdateCustomerSchema,
   type CreateCustomerType,
 } from "./lib/schemas.js";
-
 const app = new Hono();
+
+app.use("*", cors());
 
 app.on(["POST", "GET"], "/auth/*", (c) => auth.handler(c.req.raw));
 
