@@ -1,4 +1,4 @@
-import type { customerStatus } from "@sherlockapp/shared";
+import type { customerStatus } from "../constants.js";
 import { db } from "./index.js";
 import { customer } from "./schema.js";
 

@@ -1,4 +1,4 @@
-import { z } from "@sherlockapp/shared";
+import { z } from "./zod.js";
 
 export const env = z
   .object({
