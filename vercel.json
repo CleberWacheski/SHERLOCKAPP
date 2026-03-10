@@ -1,4 +1,5 @@
 {
   "buildCommand": "npm run build --workspace=shared",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "workingDirectory": "API"
 }
