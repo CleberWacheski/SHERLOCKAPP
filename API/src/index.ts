@@ -44,7 +44,7 @@ app.get("/location", async (c) => {
     },
     {
       type: "BYRADIUS",
-      radius: 100,
+      radius: 1000,
       radiusType: "KM",
     },
     "ASC",
