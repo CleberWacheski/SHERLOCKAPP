@@ -6,5 +6,8 @@
     "shared",
     "API",
     "APP"
-  ]
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=shared"
+  }
 }
