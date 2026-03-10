@@ -1,19 +1,19 @@
+import {
+  CreateCustomerSchema,
+  UpdateCustomerSchema,
+  type CreateCustomerType,
+  type customerStatus,
+} from "@sherlockapp/shared";
 import type { GeoMember } from "@upstash/redis";
 import { and, desc, eq, inArray, like, lt, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./lib/auth.js";
-import { type customerStatus } from "@sherlockapp/shared";
 import { REDIS_GEO_KEY } from "./lib/constants.js";
 import { db } from "./lib/drizzle/index.js";
 import { customer } from "./lib/drizzle/schema.js";
 import { env } from "./lib/env.js";
 import { redis } from "./lib/redis.js";
-import {
-  CreateCustomerSchema,
-  UpdateCustomerSchema,
-  type CreateCustomerType,
-} from "@sherlockapp/shared";
 
 const app = new Hono().basePath("/api");
 
@@ -116,7 +116,6 @@ app.get("/customers", async (c) => {
     orderBy: desc(customer.id),
     where: and(
       cursor ? lt(customer.id, Number(cursor)) : undefined,
-      eq(customer.userId, session.user.id),
       querySearch
         ? or(
             like(customer.name, `%${querySearch}%`),
@@ -171,7 +170,6 @@ app.post("/customers", async (c) => {
   }
   const body: {
     customers: CreateCustomerType[];
-    userId: string;
   } = await c.req.json();
   const customers = CreateCustomerSchema.array().parse(body.customers);
   if (!customers.length) {
@@ -180,10 +178,7 @@ app.post("/customers", async (c) => {
       { status: 400 },
     );
   }
-  const userId = session?.user.id || body.userId;
-  if (!userId) {
-    return Response.json({ error: "Missing userId" }, { status: 400 });
-  }
+  const userId = session?.user.id;
   const createdCustomers = await db
     .insert(customer)
     .values(
@@ -191,7 +186,7 @@ app.post("/customers", async (c) => {
         ...c,
         lat: c.lat ? String(c.lat) : null,
         lon: c.lon ? String(c.lon) : null,
-        userId,
+        userId: userId || null,
       })),
     )
     .returning({
