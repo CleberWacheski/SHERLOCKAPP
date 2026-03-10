@@ -1,5 +1,5 @@
 {
-  "name": "API",
+  "name": "@sherlockapp/api",
   "version": "1.0.0",
   "description": "",
   "type": "module",
@@ -12,7 +12,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.20.0",
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.5.4",
     "@better-auth/expo": "^1.5.4",
@@ -21,6 +20,7 @@
     "better-auth": "^1.5.4",
     "drizzle-kit": "^0.31.9",
     "drizzle-orm": "^0.45.1",
+    "@sherlockapp/shared": "*",
     "hono": "^4.12.5",
     "zod": "^4.3.6"
   },

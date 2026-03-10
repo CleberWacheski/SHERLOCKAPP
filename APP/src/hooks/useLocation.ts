@@ -1,9 +1,9 @@
 import { authClient } from "@/lib/auth-client";
 import type { customerStatus } from "@/lib/constants";
 import { env } from "@/lib/env";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-type NearbyUser = {
+export type NearbyUser = {
   lat: number;
   lon: number;
   status: (typeof customerStatus)[number];
@@ -27,6 +27,7 @@ export function useLocation({ coords }: UseLocationProps) {
   return useQuery({
     queryKey: ["location", coords?.lat, coords?.lon],
     enabled: Boolean(coords),
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       if (!coords) return { nearbyUsers: [] };
       const cookies = authClient.getCookie();

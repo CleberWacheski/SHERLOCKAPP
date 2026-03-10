@@ -28,9 +28,10 @@ interface CustomerCardProps {
     createdAt: string | null;
     updatedAt: string;
   };
+  onPress?: () => void;
 }
 
-export function CustomerCard({ customer }: CustomerCardProps) {
+export function CustomerCard({ customer, onPress }: CustomerCardProps) {
   const deleteCustomer = useDeleteCustomer();
 
   const handleLongPress = () => {
@@ -56,6 +57,7 @@ export function CustomerCard({ customer }: CustomerCardProps) {
   return (
     <TouchableOpacity
       activeOpacity={0.7}
+      onPress={onPress}
       onLongPress={handleLongPress}
       style={styles.card}
     >

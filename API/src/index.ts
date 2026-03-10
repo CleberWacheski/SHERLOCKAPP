@@ -3,7 +3,8 @@ import { and, desc, eq, inArray, like, lt, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./lib/auth.js";
-import { REDIS_GEO_KEY, type customerStatus } from "./lib/constants.js";
+import { type customerStatus } from "@sherlockapp/shared";
+import { REDIS_GEO_KEY } from "./lib/constants.js";
 import { db } from "./lib/drizzle/index.js";
 import { customer } from "./lib/drizzle/schema.js";
 import { env } from "./lib/env.js";
@@ -12,7 +13,7 @@ import {
   CreateCustomerSchema,
   UpdateCustomerSchema,
   type CreateCustomerType,
-} from "./lib/schemas.js";
+} from "@sherlockapp/shared";
 
 const app = new Hono().basePath("/api");
 

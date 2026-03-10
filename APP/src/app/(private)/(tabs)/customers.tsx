@@ -6,18 +6,85 @@ import { AppInput } from "@/components/ui/Input";
 import { Layout } from "@/components/ui/Layout";
 import { AppText } from "@/components/ui/Text";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useUpdateCustomer } from "@/hooks/useUpdateCustomer";
+import type { customerStatus } from "@/lib/constants";
+import { customerStatus as customerStatusList } from "@/lib/constants";
+import { getStatusColor } from "@/lib/get-status-color";
 import { theme } from "@/lib/theme";
-import { Filter, Plus } from "lucide-react-native";
-import { useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import { Filter, Plus, X } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 import { useDebounce } from "use-debounce";
 
 export default function CustomersScreen() {
+  const params = useLocalSearchParams<{ search?: string }>();
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+
+  // Update modal state
+  const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<{
+    id: number;
+    name: string;
+    note: string | null;
+    status: (typeof customerStatus)[number];
+  } | null>(null);
+  const [editNote, setEditNote] = useState("");
+  const [editStatus, setEditStatus] = useState<
+    (typeof customerStatus)[number] | null
+  >(null);
+  const { mutate: updateCustomer, isPending: isUpdating } =
+    useUpdateCustomer();
+
+  useEffect(() => {
+    if (params.search) {
+      setSearch(params.search);
+    }
+  }, [params.search]);
+
+  const handleCardPress = (customer: {
+    id: number;
+    name: string;
+    note: string | null;
+    status: (typeof customerStatus)[number];
+  }) => {
+    setSelectedCustomer(customer);
+    setEditNote(customer.note || "");
+    setEditStatus(customer.status);
+    setUpdateModalVisible(true);
+  };
+
+  const handleUpdate = () => {
+    if (!selectedCustomer || !editStatus) return;
+    updateCustomer(
+      {
+        id: selectedCustomer.id,
+        status: editStatus,
+        note: editNote,
+      },
+      {
+        onSuccess: () => {
+          setUpdateModalVisible(false);
+          refetch();
+        },
+      },
+    );
+  };
 
   const {
     data,
@@ -81,7 +148,12 @@ export default function CustomersScreen() {
           data={customers}
           showsVerticalScrollIndicator={false}
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => <CustomerCard customer={item} />}
+          renderItem={({ item }) => (
+            <CustomerCard
+              customer={item}
+              onPress={() => handleCardPress(item)}
+            />
+          )}
           contentContainerStyle={styles.listContent}
           onEndReached={() => {
             if (hasNextPage) fetchNextPage();
@@ -124,6 +196,88 @@ export default function CustomersScreen() {
         visible={isCreateModalVisible}
         onClose={() => setIsCreateModalVisible(false)}
       />
+      <Modal
+        animationType="slide"
+        transparent
+        visible={updateModalVisible}
+        onRequestClose={() => setUpdateModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalContainer}
+        >
+          <TouchableWithoutFeedback
+            onPress={() => setUpdateModalVisible(false)}
+          >
+            <View style={{ flex: 1 }} />
+          </TouchableWithoutFeedback>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <AppText style={styles.modalTitle} weight="bold">
+                {selectedCustomer?.name}
+              </AppText>
+              <TouchableOpacity onPress={() => setUpdateModalVisible(false)}>
+                <X size={24} color={theme.colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView>
+              <AppText style={{ marginBottom: 8, fontWeight: "bold" }}>
+                Status
+              </AppText>
+              <View style={styles.statusContainer}>
+                {customerStatusList.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[
+                      styles.statusButton,
+                      editStatus === s && styles.statusButtonSelected,
+                    ]}
+                    onPress={() => setEditStatus(s)}
+                  >
+                    <View style={styles.statusButtonInner}>
+                      <View
+                        style={[
+                          styles.statusDot,
+                          { backgroundColor: getStatusColor(s) },
+                        ]}
+                      />
+                      <AppText
+                        style={[
+                          styles.statusButtonText,
+                          editStatus === s && styles.statusButtonTextSelected,
+                        ]}
+                      >
+                        {s}
+                      </AppText>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <AppInput
+                label="Notas"
+                value={editNote}
+                onChangeText={setEditNote}
+                multiline
+                numberOfLines={4}
+                style={styles.textArea}
+                placeholder="Adicione uma nota..."
+              />
+
+              <AppButton
+                onPress={handleUpdate}
+                isLoading={isUpdating}
+                style={{ marginTop: 16 }}
+              >
+                <AppText style={{ color: "white", fontWeight: "bold" }}>
+                  Salvar Alterações
+                </AppText>
+              </AppButton>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Layout>
   );
 }
@@ -185,5 +339,67 @@ const styles = StyleSheet.create({
   emptyContainer: {
     padding: 32,
     alignItems: "center",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: theme.colors.text.primary,
+  },
+  statusContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 24,
+  },
+  statusButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  statusButtonSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  statusButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusButtonText: {
+    fontSize: 12,
+    color: theme.colors.text.primary,
+  },
+  statusButtonTextSelected: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: "top",
   },
 });

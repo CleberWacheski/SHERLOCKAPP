@@ -5,7 +5,7 @@ import {
   sqliteTableCreator,
   text,
 } from "drizzle-orm/sqlite-core";
-import { customerStatus } from "../constants.js";
+import { customerStatus } from "@sherlockapp/shared";
 
 const createTable = sqliteTableCreator((name) => `sherlock_${name}`);
 

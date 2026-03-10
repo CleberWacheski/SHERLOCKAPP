@@ -82,6 +82,7 @@ export default function Index() {
                 onChangeText={onChange}
                 placeholder="••••••••"
                 secureTextEntry
+                autoCapitalize="none"
                 errorMessage={fieldState.error?.message}
               />
             )}

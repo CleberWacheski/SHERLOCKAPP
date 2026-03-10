@@ -1,65 +1,24 @@
-import { AppButton } from "@/components/ui/Button";
-import { AppInput } from "@/components/ui/Input";
 import { Layout } from "@/components/ui/Layout";
 import { AppText } from "@/components/ui/Text";
-import { useLocation } from "@/hooks/useLocation";
-import { useUpdateCustomer } from "@/hooks/useUpdateCustomer";
-import {
-  LATITUDE_DELTA,
-  LONGITUDE_DELTA,
-  customerStatus,
-} from "@/lib/constants";
+import { useLocation, type NearbyUser } from "@/hooks/useLocation";
+import { LATITUDE_DELTA, LONGITUDE_DELTA } from "@/lib/constants";
 import { getStatusColor } from "@/lib/get-status-color";
 import { theme } from "@/lib/theme";
 import * as Location from "expo-location";
-import { Locate, MapPin, X } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { Locate } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
+  Image,
   Linking,
-  Modal,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { useDebouncedCallback } from "use-debounce";
-
-export const lightAppMapStyle = [
-  {
-    elementType: "geometry",
-    stylers: [{ color: "#F3F4F6" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#FFFFFF" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#E5E7EB" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#E5E7EB" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "geometry",
-    stylers: [{ color: "#E5E7EB" }],
-  },
-  {
-    featureType: "transit",
-    stylers: [{ visibility: "off" }],
-  },
-];
 
 type LocationProps = {
   lat: number;
@@ -67,59 +26,32 @@ type LocationProps = {
 };
 
 export default function Map() {
+  const router = useRouter();
   const mapRegion = useRef<LocationProps | null>(null);
+  const [queryCoords, setQueryCoords] = useState<LocationProps | null>(null);
+  const [permissionGranted, setPermissionGranted] = useState(true);
   const currentLocation = useRef<LocationProps | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const isFollowingUser = useRef(true);
   const mapRef = useRef<MapView | null>(null);
-  const { data, isLoading, refetch } = useLocation({
-    coords: mapRegion.current,
+  const { data } = useLocation({
+    coords: queryCoords,
   });
-  const { mutate, isPending } = useUpdateCustomer();
-
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<{
-    id: number;
-    name: string;
-    note: string | null;
-    status: (typeof customerStatus)[number];
-  } | null>(null);
-  const [note, setNote] = useState("");
-  const [status, setStatus] = useState<(typeof customerStatus)[number] | null>(
+  const [selectedCustomer, setSelectedCustomer] = useState<NearbyUser | null>(
     null,
   );
 
   const debouncedFetch = useDebouncedCallback(() => {
-    refetch();
-  }, 1000);
+    if (mapRegion.current) {
+      setQueryCoords({ ...mapRegion.current });
+    }
+  }, 6000);
 
-  const handleMarkerPress = (user: {
-    id: number;
-    name: string;
-    note: string | null;
-    status: (typeof customerStatus)[number];
-  }) => {
-    setSelectedCustomer(user);
-    setNote(user.note || "");
-    setStatus(user.status);
-    setModalVisible(true);
-  };
-
-  const handleUpdate = () => {
-    if (!selectedCustomer || !status) return;
-    mutate(
-      {
-        id: selectedCustomer.id,
-        status: status,
-        note: note,
-      },
-      {
-        onSuccess: () => {
-          setModalVisible(false);
-          refetch();
-        },
-      },
-    );
+  const handleMarkerPress = (user: { name: string }) => {
+    router.push({
+      pathname: "/(private)/(tabs)/customers",
+      params: { search: user.name },
+    });
   };
 
   const setRegionToCurrentLocation = useCallback(() => {
@@ -139,14 +71,15 @@ export default function Map() {
   useEffect(() => {
     if (currentLocation.current && isMapReady) {
       mapRegion.current = currentLocation.current;
-      refetch();
+      setQueryCoords({ ...currentLocation.current });
     }
-  }, [isMapReady, refetch]);
+  }, [isMapReady]);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     async function startLocationUpdates() {
       const { status } = await Location.requestForegroundPermissionsAsync();
+      setPermissionGranted(status === "granted");
       if (status !== "granted") {
         return;
       }
@@ -184,7 +117,18 @@ export default function Map() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!isMapReady || !currentLocation.current) {
+  function handleSelect(customer: NearbyUser) {
+    setSelectedCustomer(customer);
+
+    mapRef.current?.animateToRegion({
+      latitude: customer.lat,
+      longitude: customer.lon,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+  }
+
+  if (!permissionGranted) {
     return (
       <Layout>
         <View style={styles.centered}>
@@ -205,7 +149,7 @@ export default function Map() {
     );
   }
 
-  if (isLoading) {
+  if (!isMapReady || !currentLocation.current) {
     return (
       <Layout>
         <View style={styles.centered}>
@@ -220,8 +164,12 @@ export default function Map() {
       <MapView
         ref={mapRef}
         provider="google"
-        customMapStyle={lightAppMapStyle}
         style={StyleSheet.absoluteFillObject}
+        onPress={() => {
+          if (selectedCustomer) {
+            setSelectedCustomer(null);
+          }
+        }}
         onPanDrag={() => {
           isFollowingUser.current = false;
         }}
@@ -243,128 +191,29 @@ export default function Map() {
           }
         }}
       >
-        {data?.nearbyUsers?.map((user) => (
+        {data?.nearbyUsers.map((customer) => (
           <Marker
-            onPress={() => handleMarkerPress(user)}
-            key={user.id}
-            coordinate={{
-              latitude: user.lat,
-              longitude: user.lon,
+            key={customer.id}
+            style={{
+              zIndex: 999,
             }}
+            coordinate={{
+              latitude: customer.lat,
+              longitude: customer.lon,
+            }}
+            onPress={() => handleSelect(customer)}
           >
-            <View style={styles.markerContainer}>
-              <View style={styles.bubble}>
-                <AppText style={styles.name}>{user.name}</AppText>
-                <AppText
-                  style={[
-                    styles.status,
-                    {
-                      color: getStatusColor(user.status),
-                    },
-                  ]}
-                >
-                  {user.status}
-                </AppText>
-              </View>
-
-              <MapPin
-                size={40}
-                color={getStatusColor(user.status)}
-                fill={getStatusColor(user.status)}
-              />
-            </View>
+            <Image
+              source={
+                customer.status === "AGUARDANDO VISITA"
+                  ? require("../../../../assets/images/marker.png")
+                  : require("../../../../assets/images/marker-green.png")
+              }
+              style={styles.marker}
+            />
           </Marker>
         ))}
-        {currentLocation && (
-          <Marker
-            key="current"
-            coordinate={{
-              latitude: currentLocation.current.lat,
-              longitude: currentLocation.current.lon,
-            }}
-          >
-            <View>
-              <MapPin
-                size={40}
-                color={theme.colors.primary}
-                fill={theme.colors.primary}
-              />
-            </View>
-          </Marker>
-        )}
       </MapView>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalContainer}
-        >
-          <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
-            <View style={{ flex: 1 }} />
-          </TouchableWithoutFeedback>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle} weight="bold">
-                {selectedCustomer?.name}
-              </AppText>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X size={24} color={theme.colors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView>
-              <AppText style={{ marginBottom: 8, fontWeight: "bold" }}>
-                Status
-              </AppText>
-              <View style={styles.statusContainer}>
-                {customerStatus.map((s) => (
-                  <TouchableOpacity
-                    key={s}
-                    style={[
-                      styles.statusButton,
-                      status === s && styles.statusButtonSelected,
-                    ]}
-                    onPress={() => setStatus(s)}
-                  >
-                    <AppText
-                      style={[
-                        styles.statusButtonText,
-                        status === s && styles.statusButtonTextSelected,
-                      ]}
-                    >
-                      {s}
-                    </AppText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <AppInput
-                label="Notas"
-                value={note}
-                onChangeText={setNote}
-                multiline
-                numberOfLines={4}
-                style={styles.textArea}
-                placeholder="Adicione uma nota..."
-              />
-
-              <AppButton
-                onPress={handleUpdate}
-                isLoading={isPending}
-                style={{ marginTop: 16 }}
-              >
-                <AppText style={{ color: "white", fontWeight: "bold" }}>
-                  Salvar Alterações
-                </AppText>
-              </AppButton>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
       <TouchableOpacity
         style={styles.fab}
         onPress={setRegionToCurrentLocation}
@@ -372,6 +221,29 @@ export default function Map() {
       >
         <Locate size={24} color={theme.colors.primary} />
       </TouchableOpacity>
+      {selectedCustomer && (
+        <TouchableOpacity
+          onPress={() => handleMarkerPress(selectedCustomer)}
+          style={styles.card}
+        >
+          <AppText weight="bold">{selectedCustomer.name}</AppText>
+          <View style={styles.statusBadge}>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: getStatusColor(selectedCustomer.status) },
+              ]}
+            />
+            <AppText
+              size={10}
+              color={theme.colors.text.secondary}
+              style={styles.statusText}
+            >
+              {selectedCustomer.status}
+            </AppText>
+          </View>
+        </TouchableOpacity>
+      )}
     </Layout>
   );
 }
@@ -419,80 +291,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  markerContainer: {
-    alignItems: "center",
+  marker: {
+    width: 32,
+    height: 32,
   },
-  bubble: {
+  card: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    gap: 8,
+    right: 20,
     backgroundColor: "white",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginBottom: 4,
-    elevation: 2,
+    padding: 16,
+    borderRadius: 12,
+    elevation: 5,
+
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    gap: 4,
-  },
-  name: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: theme.colors.text.primary,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
   },
   status: {
     fontSize: 10,
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    maxHeight: "80%",
-  },
-  modalHeader: {
+  statusBadge: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: theme.colors.text.primary,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 24,
-  },
-  statusButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.full,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  statusButtonSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
   },
-  statusButtonText: {
-    fontSize: 12,
-    color: theme.colors.text.primary,
-  },
-  statusButtonTextSelected: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
+  statusText: {
+    fontSize: 10,
+    color: theme.colors.text.secondary,
   },
 });

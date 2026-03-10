@@ -1,1 +1,1 @@
-export * as z from "zod";
+export { z } from "@sherlockapp/shared";
