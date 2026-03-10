@@ -1,5 +1,5 @@
-import { customerStatus } from "./constants.js";
-import { z } from "./zod.js";
+import { customerStatus } from "./constants";
+import { z } from "./zod";
 
 export const SignInSchema = z.object({
   email: z.email("Digite um email válido"),
