@@ -8,6 +8,7 @@
     "APP"
   ],
   "scripts": {
-    "build": "npm run build --workspace=shared"
+    "build": "npm run build --workspace=shared",
+    "postinstall": "npm run build --workspace=shared"
   }
 }
